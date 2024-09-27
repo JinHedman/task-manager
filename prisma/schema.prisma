@@ -12,4 +12,13 @@ model Task {
   title       String
   description String?
   createdAt   DateTime @default(now())
+  userId      String   // foreign key to the User model
+  user        User     @relation(fields: [userId], references: [id]) // relation to User
+}
+
+model User {
+  id    String   @id @default(uuid()) 
+  email String   @unique
+  name  String?
+  tasks Task[]   // a user can have multiple tasks (array)
 }

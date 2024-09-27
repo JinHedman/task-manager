@@ -1,4 +1,3 @@
-import { Resolvers } from "../../generated/graphql";
 import { PrismaClient } from "@prisma/client";
 import redis from "./redis";
 
@@ -9,18 +8,37 @@ interface Task {
     title: string;
     description?: string;
 }
+interface User {
+    id: string;
+    name: string;
+    email: string;
+}
+interface Context {
+    user?: User;
+}
 
-export const resolvers: Resolvers = {
+export const resolvers = {
     Query: {
-        tasks: async () => {
+        tasks: async (_parent: any,_args: any, context: Context) => {
+            // check if user is logged in
+            const { user } = context;
+            if (!user) {
+                throw new Error("Not authenticated");
+            }
             // check redis cache first
             const cachedTasks = await redis.get("tasks");
             if (cachedTasks) {
-                //console.log("cached tasks found!");
+                console.log("cached tasks found!");
                 return JSON.parse(cachedTasks);
             }
-            // otherwise get all tasks from the database
-            const tasks = await prisma.task.findMany();
+            // otherwise get all tasks from the database where userId matches
+            const tasks = await prisma.task.findMany(
+                {
+                    where: {
+                        userId: user.id,
+                    },
+                },
+            );
             // cache tasks in redis
             await redis.set("tasks", JSON.stringify(tasks));
             // convert id to string to match GraphQL schema
@@ -32,11 +50,17 @@ export const resolvers: Resolvers = {
     },
     Mutation: {
         // create new task
-        createTask: async (_parent, {title, description}) => {
+        createTask: async (_parent: any, { title, description }: { title: string; description: string }, context: Context) => {
+            // check if user is logged in            
+            const { user } = context;
+            if (!user) {
+                throw new Error("Not authenticated");
+            }
             const newTask = await prisma.task.create({
                 data: {
                     title,
                     description,
+                    userId: user.id,
                 },
             });
             // clear cache

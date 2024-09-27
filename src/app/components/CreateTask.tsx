@@ -2,22 +2,15 @@
 
 import { gql, useMutation } from "@apollo/client";
 import { useState } from "react";
+import { CREATE_TASK } from "../lib/schema";
 
-const CREATE_TASK = gql`
-  mutation CreateTask($title: String!, $description: String) {
-    createTask(title: $title, description: $description) {
-      id
-      title
-      description
-    }
-  }
-`;
+
 
 export default function CreateTask() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [createTask, { data, loading, error }] = useMutation(CREATE_TASK, {
-    refetchQueries: ['GetTasks'], // Refetch tasks after creating a new one
+    refetchQueries: ['GetTasks'], // refetch tasks after creating a new one
   });
 
   // POST task handler
